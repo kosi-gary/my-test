@@ -83,3 +83,72 @@ jobs:
               echo "</details>"
             } >> $GITHUB_STEP_SUMMARY
           fi
+
+  deploy_dev:
+    name: Deploy to DEV
+
+    needs: build_docker
+
+    # runs-on:
+    #   labels: [ "self-hosted", "Linux", "X64", "sdc", "dev" ]
+    runs-on: ubuntu-latest
+
+    environment:
+      name: dev
+      url: http://my-demo.training99/
+
+    steps:
+      - name: lowercase github.repository
+        run: |
+          echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # # https://github.com/Azure/setup-helm
+      # - name: Helm tool installer
+      #   uses: Azure/setup-helm@v4
+      #   # with:
+      #   #   version: "3.14.0" # default is latest (stable)
+      #   #   token: ${{ secrets.GITHUB_TOKEN }} # only needed if version is 'latest'
+
+      # https://github.com/Azure/setup-kubectl
+      - name: Kubectl tool installer
+        uses: Azure/setup-kubectl@v4
+        # with:
+        #   version: "v1.26.8" # default is latest stable
+
+      - name: Kubernetes set context
+        uses: Azure/k8s-set-context@v4
+        with:
+          method: service-account
+          k8s-url: ${{ vars.K8S_URL }}
+          k8s-secret: ${{ secrets.K8S_SECRET }}
+
+      # - name: Create secret in Kubernetes cluster
+      #   id: create-k8s-secret
+      #   uses: Azure/k8s-create-secret@v5
+      #   with:
+      #     namespace: ${{ vars.K8S_NS }}
+      #     container-registry-url: ghcr.io
+      #     container-registry-username: githut-actions
+      #     container-registry-password: ${{ secrets.READ_PACKAGES_PAT }}
+      #     secret-name: regcred
+
+      - name: Replace placeholder in deployment manifest
+        run: |
+          sed -i "s|DEPLOYMENT_IMAGE|${{ env.IMAGE_NAME }}|g" manifests/deployment.yaml
+
+      - name: Deploy to Kubernetes
+        id: deploy-k8s
+        uses: Azure/k8s-deploy@v5
+        with:
+          action: deploy
+          manifests: |
+            manifests/deployment.yaml
+            manifests/service.yaml
+            manifests/ingress.yaml
+          namespace: ${{ vars.K8S_NS }}
+          images: |
+            ${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+          # imagepullsecrets: regcred
