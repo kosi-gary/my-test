@@ -95,7 +95,7 @@ jobs:
 
     environment:
       name: dev
-      url: http://my-demo.training99/
+      url: http://${{vars.INGRESS_HOST}}/
 
     steps:
       - name: lowercase github.repository
