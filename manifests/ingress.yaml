@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: demo-dotnet-web
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: INGRESS_HOST
+    http:
+      paths:
+      - backend:
+          service:
+            name: demo-dotnet-web
+            port:
+              number: 80
+        path: /
+        pathType: ImplementationSpecific

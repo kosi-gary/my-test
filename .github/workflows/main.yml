@@ -138,6 +138,7 @@ jobs:
       - name: Replace placeholder in deployment manifest
         run: |
           sed -i "s|DEPLOYMENT_IMAGE|${{ env.IMAGE_NAME }}|g" manifests/deployment.yaml
+          sed -i "s|INGRESS_HOST|${{ vars.INGRESS_HOST }}|g" manifests/ingress.yaml
 
       - name: Deploy to Kubernetes
         id: deploy-k8s
